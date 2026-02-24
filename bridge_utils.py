@@ -12,14 +12,13 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from typing import List
 
-from crossmodal_v4_enhancements import LearnedFusionModule
+from EEG_CODE.crossmodal_v4_enhancements import LearnedFusionModule
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Bridge Fusion Model (Cell 10)
+# Bridge Fusion Model 
 # ---------------------------------------------------------------------------
-
 class EEGfMRIBridgeFusionNet(nn.Module):
     """Cross-modality bridge fusion: EEG (128-d) + fMRI (64-d).
 
@@ -60,7 +59,7 @@ class EEGfMRIBridgeFusionNet(nn.Module):
         # Classifier
         self.classifier = nn.Sequential(
             nn.Linear(bridge_dim, bridge_dim // 2),
-            nn.BatchNorm1d(bridge_dim // 2),
+            nn.LayerNorm(bridge_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(bridge_dim // 2, num_classes)
@@ -118,42 +117,44 @@ class EEGfMRIBridgeFusionNet(nn.Module):
 # ---------------------------------------------------------------------------
 # Bridge Feature Dataset + collate (Cell 11)
 # ---------------------------------------------------------------------------
-
 class BridgeFeatureDataset(Dataset):
     """Dataset of pre-extracted EEG and fMRI features, aligned by subject."""
     def __init__(self, eeg_features, fmri_features, labels, subject_list):
         self.samples = []
+        
+        # Ensure we are comparing the same types (Force all to int)
+        # This fixes the alignment error where '001' != 1
+        standardized_eeg = {int(k): v for k, v in eeg_features.items()}
+        standardized_fmri = {int(k): v for k, v in fmri_features.items()}
+        standardized_labels = {int(k): v for k, v in labels.items()}
+
         for subj in sorted(subject_list):
-            if subj in eeg_features and subj in fmri_features and subj in labels:
+            s_id = int(subj)
+            if s_id in standardized_eeg and s_id in standardized_fmri and s_id in standardized_labels:
                 self.samples.append({
-                    'eeg': eeg_features[subj],
-                    'fmri': fmri_features[subj],
-                    'label': labels[subj],
-                    'subject': subj
+                    'eeg': standardized_eeg[s_id],
+                    'fmri': standardized_fmri[s_id],
+                    'label': standardized_labels[s_id],
+                    'subject': s_id
                 })
-        logger.info(f'BridgeFeatureDataset: {len(self.samples)} samples')
+        
+        if len(self.samples) == 0:
+            logger.error("!!! NO SAMPLES ALIGNED !!! Check subject IDs in EEG and fMRI feature dicts.")
+        else:
+            logger.info(f'BridgeFeatureDataset: {len(self.samples)} aligned samples found.')
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
         s = self.samples[idx]
+        # Returns exactly what the model expects: (eeg_tensor, fmri_tensor, label, subject_id)
         return s['eeg'], s['fmri'], s['label'], s['subject']
-
-
-def collate_bridge(batch):
-    """Collate function for BridgeFeatureDataset."""
-    eeg = torch.stack([b[0] for b in batch])
-    fmri = torch.stack([b[1] for b in batch])
-    labels = torch.tensor([b[2] for b in batch], dtype=torch.long)
-    subjects = [b[3] for b in batch]
-    return eeg, fmri, labels, subjects
 
 
 # ---------------------------------------------------------------------------
 # XAI: Gradient Saliency (Cell 14)
 # ---------------------------------------------------------------------------
-
 class BridgeGradientSaliency:
     """Gradient saliency for the bridge model."""
     def __init__(self, model, device):

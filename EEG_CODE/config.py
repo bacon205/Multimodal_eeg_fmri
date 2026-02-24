@@ -20,10 +20,10 @@ class Config:
     def __init__(self, config_path: Optional[str] = None):
         #self.base_path = Path(os.getenv('EEG_DATA_PATH', r'E:\Intermediate\BACON_ERIC\Head_neck'))
         self.base_path = Path(os.getenv('EEG_DATA_PATH', r'E:\Head_neck'))
-        self.eeg_path_pw = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'TF_dir' / 'pwspctrm' / 'PWS' / 'feat' / 'New'
+        self.eeg_path_pw = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'TF_dir' / 'pwspctrm' / 'PWS' / 'feat' # / 'New'
         self.eeg_path_erp = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'TF_dir' / 'ERP' / 'New'
         #self.eeg_path_erp = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'TF_dir' / 'ERP'
-        self.eeg_path_conn = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'conn_dir' / 'New'
+        self.eeg_path_conn = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'conn_dir' / 'CONN' #/ 'New'
         self.label_path = self.base_path / 'EEG' / 'DATA' / 'PROC' / 'data_proc' / 'cleaned_data' / 'TF_dir'
         
         # Subject and experimental setup
